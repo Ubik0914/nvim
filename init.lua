@@ -21,3 +21,7 @@ end
 vim.opt.rtp:prepend(lazypath)
 
 require("lazy").setup("plugins")
+
+-- 全カラースキームプラグイン読込後に、テーマを一元適用＆:Theme を定義
+require("config.theme").setup_command()
+require("config.theme").apply()

@@ -17,9 +17,11 @@ return {
   },
   {
     "iamcco/markdown-preview.nvim",
+    commit = "a923f5fc5ba36a3b17e289dc35dc17f66d0548ee",
     cmd = { "MarkdownPreview", "MarkdownPreviewStop", "MarkdownPreviewToggle" },
     ft = "markdown",
     build = function()
+      -- Node.js バイナリを外部からダウンロードする。commit ピンで変更検知する
       vim.fn["mkdp#util#install"]()
     end,
   },

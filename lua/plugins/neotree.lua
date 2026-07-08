@@ -8,8 +8,9 @@ return {
       "MunifTanjim/nui.nvim",
     },
     keys = {
-      { "<leader>e", "<cmd>Neotree toggle<cr>", desc = "Toggle Neo-tree" },
-      { "<leader>o", "<cmd>Neotree focus<cr>",  desc = "Focus Neo-tree" },
+      { "<leader>n", "<cmd>Neotree toggle<cr>", desc = "Toggle Neo-tree" },
+      { "<D-S-d>", "<cmd>Neotree toggle<cr>", desc = "Toggle Neo-tree" },
+      { "\x1b[68;10u", "<cmd>Neotree toggle<cr>", desc = "Toggle Neo-tree (Cmd+Shift+D via Ghostty)" },
     },
     opts = {
       close_if_last_window = true,

@@ -2,7 +2,8 @@ return {
   "NvChad/nvim-colorizer.lua",
   event = { "BufReadPre", "BufNewFile" },
   opts = {
-    filetypes = { "*" },
+    -- 全バッファへの色解析は重いため、色指定が出る FT のみに限定
+    filetypes = { "css", "scss", "sass", "less", "html", "javascript", "typescript", "javascriptreact", "typescriptreact", "vue", "json", "yaml", "lua" },
     user_default_options = {
       RGB = true,
       RRGGBB = true,

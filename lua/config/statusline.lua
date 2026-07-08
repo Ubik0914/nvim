@@ -15,28 +15,32 @@ local modes = {
 
 local function setup_hl()
   local hi = vim.api.nvim_set_hl
-  local bg = "#1F1F1F"
+  local bg = "#1b1818"
+  local panel = "#292424"
+  local fg = "#e7dfdf"
 
-  hi(0, "StNormal",     { fg = "#1F1F1F", bg = "#569CD6", bold = true })
-  hi(0, "StInsert",     { fg = "#1F1F1F", bg = "#4EC9B0", bold = true })
-  hi(0, "StVisual",     { fg = "#1F1F1F", bg = "#C586C0", bold = true })
-  hi(0, "StCommand",    { fg = "#1F1F1F", bg = "#DCDCAA", bold = true })
-  hi(0, "StReplace",    { fg = "#1F1F1F", bg = "#F44747", bold = true })
-  hi(0, "StTerm",       { fg = "#1F1F1F", bg = "#4EC9B0", bold = true })
+  hi(0, "StNormal",     { fg = bg, bg = "#7272ca", bold = true })
+  hi(0, "StInsert",     { fg = bg, bg = "#4b8b8b", bold = true })
+  hi(0, "StVisual",     { fg = bg, bg = "#8464c4", bold = true })
+  hi(0, "StCommand",    { fg = bg, bg = "#a06e3b", bold = true })
+  hi(0, "StReplace",    { fg = bg, bg = "#ca4949", bold = true })
+  hi(0, "StTerm",       { fg = bg, bg = "#5485b6", bold = true })
+  hi(0, "StNormalAlert",{ fg = bg, bg = "#ca4949", bold = true })
 
-  hi(0, "StNormalSep",  { fg = "#569CD6", bg = bg })
-  hi(0, "StInsertSep",  { fg = "#4EC9B0", bg = bg })
-  hi(0, "StVisualSep",  { fg = "#C586C0", bg = bg })
-  hi(0, "StCommandSep", { fg = "#DCDCAA", bg = bg })
-  hi(0, "StReplaceSep", { fg = "#F44747", bg = bg })
-  hi(0, "StTermSep",    { fg = "#4EC9B0", bg = bg })
+  hi(0, "StNormalSep",  { fg = "#7272ca", bg = bg })
+  hi(0, "StInsertSep",  { fg = "#4b8b8b", bg = bg })
+  hi(0, "StVisualSep",  { fg = "#8464c4", bg = bg })
+  hi(0, "StCommandSep", { fg = "#a06e3b", bg = bg })
+  hi(0, "StReplaceSep", { fg = "#ca4949", bg = bg })
+  hi(0, "StTermSep",    { fg = "#5485b6", bg = bg })
+  hi(0, "StNormalAlertSep", { fg = "#ca4949", bg = bg })
 
-  hi(0, "StFile",       { fg = "#CCCCCC", bg = bg })
-  hi(0, "StModified",   { fg = "#DCDCAA", bg = bg })
-  hi(0, "StFill",       { fg = "#CCCCCC", bg = bg })
-  hi(0, "StRightSep",   { fg = "#2B2B2B", bg = bg })
-  hi(0, "StRight",      { fg = "#9D9D9D", bg = "#2B2B2B" })
-  hi(0, "StPos",        { fg = "#CCCCCC", bg = "#2B2B2B", bold = true })
+  hi(0, "StFile",       { fg = fg, bg = bg })
+  hi(0, "StModified",   { fg = "#a06e3b", bg = bg })
+  hi(0, "StFill",       { fg = fg, bg = bg })
+  hi(0, "StRightSep",   { fg = panel, bg = bg })
+  hi(0, "StRight",      { fg = "#8a8585", bg = panel })
+  hi(0, "StPos",        { fg = fg, bg = panel, bold = true })
 end
 
 function M.render()
@@ -47,6 +51,14 @@ function M.render()
   local modified = vim.bo.modified and "  " or ""
   local readonly  = (vim.bo.readonly or not vim.bo.modifiable) and " 󰌾 " or ""
   local ft = vim.bo.filetype ~= "" and (" " .. vim.bo.filetype .. " ") or " text "
+  local ime_label = vim.g.current_ime_label or "--"
+  local mode_hl = hl
+  local mode_sep_hl = hl .. "Sep"
+
+  if mode == "n" and ime_label ~= "EN" then
+    mode_hl = "StNormalAlert"
+    mode_sep_hl = "StNormalAlertSep"
+  end
 
   -- LSP diagnostics
   local errors   = #vim.diagnostic.get(0, { severity = vim.diagnostic.severity.ERROR })
@@ -55,10 +67,18 @@ function M.render()
   if errors > 0   then diag = diag .. "%#DiagnosticError#  " .. errors .. " " end
   if warnings > 0 then diag = diag .. "%#DiagnosticWarn#  " .. warnings .. " " end
 
+  local branch = vim.b.gitsigns_head or ""
+  local branch_str = branch ~= "" and (" (" .. branch .. ")") or ""
+
+  local fname = vim.fn.expand("%:t")
+  local display = fname ~= ""
+    and "%t"
+    or (vim.fn.fnamemodify(vim.fn.getcwd(), ":~") .. "/[scratch]")
+
   return table.concat({
-    "%#" .. hl .. "#  " .. label .. " ",
-    "%#" .. hl .. "Sep#\xee\x82\xb0",  --
-    "%#StFile#  %t",
+    "%#" .. mode_hl .. "#  " .. label .. " ",
+    "%#" .. mode_sep_hl .. "#\xee\x82\xb0",  --
+    "%#StFile#  " .. display .. branch_str,
     modified,
     readonly,
     "%#StFill#" .. diag .. "%=",

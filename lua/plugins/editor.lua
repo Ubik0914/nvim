@@ -4,26 +4,24 @@ return {
     event = "BufReadPre",
     opts = {},
   },
+  -- rainbow(旧式・正規表現ベース)は大きいファイルで低速なため無効化
   {
     "luochen1990/rainbow",
+    enabled = false,
     event = "BufReadPre",
     config = function()
       vim.g.rainbow_active = 1
     end,
   },
+  -- スクロール/カーソルのアニメは移動を重く見せるため無効化（体感優先）
   {
     "psliwka/vim-smoothie",
-    event = "BufReadPre",
-    enabled = true,
+    enabled = false,
   },
   {
     "sphamba/smear-cursor.nvim",
+    enabled = false,
     event = "BufEnter",
-    opts = {
-      smear_between_buffers = true,
-      smear_between_neighbor_lines = true,
-      scroll_buffer_space = true,
-      legacy_computing_symbols_support = false,
-    },
+    opts = {},
   },
 }

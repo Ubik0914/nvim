@@ -1,6 +1,8 @@
 return {
   {
     "hrsh7th/nvim-cmp",
+    -- 補完は挿入モードでのみ必要なため遅延ロード（起動時ロードを回避）
+    event = "InsertEnter",
     dependencies = {
       "hrsh7th/cmp-nvim-lsp",
       "hrsh7th/cmp-buffer",
@@ -45,6 +47,13 @@ return {
           { name = "luasnip" },
           { name = "buffer" },
           { name = "path" },
+        }),
+      })
+
+      cmp.setup.filetype({ "sql", "mysql", "plsql" }, {
+        sources = cmp.config.sources({
+          { name = "vim-dadbod-completion" },
+          { name = "buffer" },
         }),
       })
     end,
