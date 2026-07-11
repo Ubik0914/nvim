@@ -1,0 +1,33 @@
+{
+  "search": [
+    "Mod+K",
+    "Mod+G"
+  ],
+  "search-in-vault": [
+    "Mod+Shift+F"
+  ],
+  "new-note": [
+    "Mod+N"
+  ],
+  "toggle-sidebar": [
+    "Mod+Shift+D"
+  ],
+  "shortcut-help": [
+    "?"
+  ],
+  "new-tab": [
+    "Mod+Alt+T"
+  ],
+  "close-tab": [
+    "Mod+Alt+W"
+  ],
+  "reopen-tab": [
+    "Mod+Alt+Shift+T"
+  ],
+  "prev-tab": [
+    "Mod+Alt+ArrowLeft"
+  ],
+  "next-tab": [
+    "Mod+Alt+ArrowRight"
+  ]
+}
