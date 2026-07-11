@@ -60,6 +60,92 @@ local function start_marquee(buf)
   end))
 end
 
+local function get_claude_usage_lines()
+  local usage_path = vim.fn.expand("~/.claude/usage-reset/last-usage-output.txt")
+  local raw_lines = {}
+  local function is_usage_output(lines)
+    local text = table.concat(lines, "\n")
+    return text:match("Current session:") ~= nil and text:match("resets ") ~= nil
+  end
+
+  if vim.fn.filereadable(usage_path) == 1 then
+    raw_lines = vim.fn.readfile(usage_path)
+    if not is_usage_output(raw_lines) then
+      raw_lines = {}
+    end
+  end
+
+  if #raw_lines == 0 and vim.fn.executable("claude") == 1 then
+    raw_lines = vim.fn.systemlist("claude --print '/usage' 2>/dev/null")
+  end
+
+  if vim.v.shell_error ~= 0 or #raw_lines == 0 or not is_usage_output(raw_lines) then
+    return {}
+  end
+
+  local text = table.concat(raw_lines, "\n")
+  local formatted = {}
+
+  local function add(line)
+    if line and line ~= "" then
+      table.insert(formatted, line)
+    end
+  end
+
+  local function meter(label, percent)
+    local width = 18
+    local filled = math.floor((percent / 100) * width + 0.5)
+    filled = math.max(0, math.min(width, filled))
+    local empty = width - filled
+    return string.format(
+      "%-7s [%s%s] %3d%%",
+      label,
+      string.rep("▰", filled),
+      string.rep("▱", empty),
+      percent
+    )
+  end
+
+  for _, item in ipairs({
+    { label = "Current session", icon = "Session" },
+    { label = "Current week %(all models%)", icon = "Weekly" },
+    { label = "Current week %(Fable%)", icon = "Fable" },
+  }) do
+    local used, reset = text:match(item.label .. ":%s+([^·\n]+)·%s+resets%s+([^\n]+)")
+    local percent = used and used:match("(%d+)%%")
+    if used and reset and percent then
+      add(meter(item.icon, tonumber(percent)))
+      add(string.format("        reset %s", vim.trim(reset)))
+      add(" ")
+    end
+  end
+
+  if #formatted == 0 then
+    return {}
+  end
+
+  if formatted[#formatted] == "" then
+    table.remove(formatted, #formatted)
+  end
+
+  local max_w = math.max(20, vim.o.columns - 12)
+  for i, line in ipairs(formatted) do
+    formatted[i] = vim.fn.strcharpart(line, 0, max_w)
+  end
+
+  local width = 0
+  for _, line in ipairs(formatted) do
+    width = math.max(width, vim.fn.strdisplaywidth(line))
+  end
+  for i, line in ipairs(formatted) do
+    local pad = width - vim.fn.strdisplaywidth(line)
+    if pad > 0 then
+      formatted[i] = line .. string.rep(" ", pad)
+    end
+  end
+  return formatted
+end
+
 return {
   {
     "goolord/alpha-nvim",
@@ -69,16 +155,16 @@ return {
       local dashboard = require("alpha.themes.dashboard")
 
       dashboard.section.header.val = {
-        "▄▀▀▄█▄     ▄▄█▓▄▄▄ ▄▀▀▀▀▀▀▀▒▒▄   ├▄▄▄░─┐     ▒▄▄─┐   ▄▄░▓▄▄▄▒▒▄▄     ▄▄▄            ▄▄▓▄■▄   ▒▄▄    ▀▒▄  ▄▀▀▄█▄     ▄▄█▓▄▄▄   █       █",
-        "▀▄░▓▌▄░▄  ▐▒▓▓▒▒░▓ ▀▄ ▓     ▀▓▌  ├░▒▓█ █     ▓▓▓▓▌  ░▒▓█▐█▒▀▐▓▓▓▓   ▓▓▓▓▌          ├▐█▓░▌▐▓  ▓▓▓▓▌  ▓▓▓▓ ▀▄░▓▌▄░▄  ▐▒▓▓▒▒░▓   ██     ██",
-        " ■▐▀ ▐█░▓▄▒▓▓▀▀▀▀▀   ▐▀   ▄▌ ▀   ▀▀▀▀▀▐■    ┌▀▀▀▀▀  ▀▀▀▀░▀   ▀▀▀▀   ▀▀▀▀           ├▀▀▀▀ ▒▌  ▀▀▀▀▀  ▀▀▀▀  ■▐▀ ▐█░▓▄▒▓▓▀▀▀▀▀   ██████████",
-        "▀▄██▄ ▓▒░░▒▓▀ ████   ██▀▀█▀      ████▌'     │▐████ ████▒░    ▐████ ████▌           ├▄▄▄▀▄▀   █████ ▄████ ▀▄██▄ ▓▒░░▒▓▀ ████   █ ████ ███",
-        " ▐▓▓▓▓▀▒▓▒█▌ ▓▓▓▓▌  ▐▓▓          ▓▓▓▓┌┘     │▐▓▓▓▓ ▓▓▓▓░     ▐▓▓▓▓ ▓▓▓▓▌           █▀▄▄▄┌┘   ▓▓▓▓▓ ▐▓▓▓▓  ▐▓▓▓▓▀▒▓▒█▌ ▓▓▓▓▌   ████▄██████",
-        " ▐▒▒▒▌ ▐▒░▓  ▒▒▒▒▌  ▀▒▒          ▒▒▒▒▌│ ░▌  ░▓▒▒▒▒ ▒▒▒▒▌    ░▒▒▒▒▒ ▒▒▒▒▌           ▐▌▒▒▌┤   ░▒▒▒▒▌ ▐▒▒▒▒  ▐▒▒▒▌ ▐▒░▓  ▒▒▒▒▌   ███ █████",
-        " ▐░░▐   ▌░▌  ▐░░░▌   ░░      ▀▄  ▐░░░▌:▒█░▌░█▌░░░▌ ▐░░░▌   ░▒▌░░░▌ ▐░░░▌            ▌░░▌┤  ░█░░░▌  ▐░░░▌  ▐░░▐   ▌░▌  ▐░░░▌  ████ ██████",
-        " ▐██▐    ▀    ███▌  ▐██▄     ▐█▌ └████▓▀██░▄█████   ████ ░▒▓▓████   ████      ▄▄▄   └▄██┤░▒▓███▀   ▐███   ▐██▐    ▀    ███▌  ███ ██████",
-        "▄████▀         ▀█▌ ▄█████▄▄▄▄█▀  └┬▀▀█░▒▀ ▀▒░█▀▀     ▀▀██▀▀▀██▀▀     ▀▀██▄▄██▀▀  ▀    ▀██▀▀██▄▀    ▐█▀▀  ▄████▀         ▀█▌  █  ██ █",
-        "☆彡｡.:・*ﾟ☆彡｡.:・*ﾟ☆彡｡.:・*ﾟ☆彡｡.:・*ﾟ☆彡｡.:・*ﾟ☆彡｡.:・*ﾟ☆彡｡.:・*ﾟ☆彡｡.:・*ﾟ☆彡｡.:・*ﾟ☆彡｡.:・*ﾟ☆彡｡.:・*ﾟ☆彡｡.:・*ﾟ☆彡｡.:・*ﾟ☆彡｡.:・*ﾟ☆彡｡.:・*ﾟ",
+        "                                                                       ▌       ▐    ",
+        "                                                                       █▌ ▁▁▁ ▐█  ",
+        "███╗   ███╗███████╗ ██████╗ ██╗    ██╗██╗    ██╗   ██╗██╗███╗   ███╗   █████████▌  ",
+        "████╗ ████║██╔════╝██╔═══██╗██║    ██║██║    ██║   ██║██║████╗ ████║   █ ████ ███  ",
+        "██╔████╔██║█████╗  ██║   ██║██║ █╗ ██║██║    ██║   ██║██║██╔████╔██║   ████▄█████▎",
+        "██║╚██╔╝██║██╔══╝  ██║   ██║██║███╗██║██║    ╚██╗ ██╔╝██║██║╚██╔╝██║   ███▌█████▔",
+        "██║ ╚═╝ ██║███████╗╚██████╔╝╚███╔███╔╝███████╗╚████╔╝ ██║██║ ╚═╝ ██║  ▐███▐█████▎",
+        "╚═╝     ╚═╝╚══════╝ ╚═════╝  ╚══╝╚══╝ ╚══════╝ ╚═══╝  ╚═╝╚═╝     ╚═╝  ███▌█████▀",
+        "                                                                      █▋ ▐▋▔▋",
+        "☆彡｡.:・*ﾟ☆彡｡.:・*ﾟ☆彡｡.:・*ﾟ☆彡｡.:・*ﾟ☆彡｡.:・*ﾟ☆彡｡.:・*ﾟ☆彡｡.:・*ﾟ☆彡｡.:・*ﾟ☆彡｡.:・*ﾟ",
       }
 
     -- base16 テーマの暖色アクセントで縦グラデーション（base0A → base08、10 step）
@@ -130,6 +216,33 @@ return {
       callback = stop_marquee,
     })
 
+    local usage_lines = get_claude_usage_lines()
+
+    local usage_section = {
+      type = "group",
+      val = (function()
+        if #usage_lines == 0 then
+          return {}
+        end
+        local group = {
+          {
+            type = "text",
+            val = "  Claude usage",
+            opts = { position = "center" },
+          },
+          { type = "padding", val = 1 },
+        }
+        for _, line in ipairs(usage_lines) do
+          table.insert(group, {
+            type = "text",
+            val = line,
+            opts = { position = "center", hl = "AlphaButtonText" },
+          })
+        end
+        return group
+      end)(),
+    }
+
     -- PR buttons section
     local function get_pr_buttons()
       if vim.fn.executable("gh") == 0 then
@@ -140,8 +253,9 @@ return {
         return {}
       end
 
-      -- header(3) + paddings(7) + nav buttons(2) + pr title(1) + footer(2) = 15 fixed lines
-      local limit = math.max(1, vim.o.lines - 15)
+      -- header(3) + paddings(7) + nav buttons(3) + pr title(1) + footer(2) = 16 fixed lines
+      local usage_height = #usage_lines > 0 and (#usage_lines + 3) or 0
+      local limit = math.max(1, vim.o.lines - 16 - usage_height)
       local raw = vim.fn.system("gh pr list --limit " .. limit .. " --json title,url")
       if vim.v.shell_error ~= 0 then
         return {}
@@ -206,6 +320,8 @@ return {
         dashboard.section.header,
         { type = "padding", val = 2 },
         dashboard.section.buttons,
+        { type = "padding", val = 1 },
+        usage_section,
         { type = "padding", val = 1 },
         pr_section,
         { type = "padding", val = 1 },
